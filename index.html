@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Explorador Digital — TIC 5.º (Plus)</title>
+  <meta name="description" content="Jogo educativo de TIC (5.º ano): Internet segura, sinais de alerta, ferramentas e boas práticas.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root{--bg1:#6a11cb;--bg2:#2575fc;--card:#0f172a;--acc:#00d4ff;--gold:#ffd700;--ok:#22c55e;--bad:#ef4444;--warn:#f59e0b}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{font-family:"Segoe UI",system-ui,Arial;background:linear-gradient(135deg,var(--bg1),var(--bg2));display:flex;align-items:center;justify-content:center;overflow:hidden;color:#fff}
+    canvas{background:#0b1022;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.45);max-width:100%;max-height:100vh}
+    .overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none}
+    .card{pointer-events:auto;width:min(900px,94vw);background:rgba(15,23,42,.92);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:24px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.55)}
+    h1{font-size:clamp(1.6rem,2.6vw + .8rem,2.4rem);margin-bottom:6px;text-shadow:0 0 24px rgba(0,212,255,.35)}
+    h2{font-size:clamp(1.15rem,2vw + .6rem,1.5rem);color:var(--gold);margin:4px 0 8px}
+    p{opacity:.95;line-height:1.6;margin:8px 0}
+    .btn{display:inline-block;background:linear-gradient(135deg,var(--acc),#0ea5e9);color:#001118;border:none;border-radius:999px;font-weight:700;padding:12px 22px;margin-top:10px;cursor:pointer;box-shadow:0 10px 30px rgba(0,212,255,.35)}
+    .hud{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.5);padding:8px 12px;border-radius:10px;font-weight:700}
+    .hud.right{left:auto;right:12px}
+    .chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);padding:8px 12px;border-radius:999px;margin:6px 6px 0 0}
+    .grid{display:grid;gap:10px;margin-top:10px}
+    .options{margin-top:12px;display:grid;gap:12px}
+    .opt{text-align:left;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.12);cursor:pointer}
+    .opt:hover{transform:scale(1.02);border-color:var(--acc);background:rgba(0,212,255,.18)}
+    .opt.correct{border-color:var(--ok);background:rgba(34,197,94,.22)}
+    .opt.wrong{border-color:var(--bad);background:rgba(239,68,68,.22)}
+    .explain{margin-top:10px;background:rgba(255,255,255,.06);border-left:4px solid var(--warn);padding:10px 12px;border-radius:10px}
+    .progress{height:12px;background:rgba(255,255,255,.1);border-radius:999px;margin-top:12px;overflow:hidden}
+    .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--acc),var(--gold));transition:width .5s}
+    .hidden{display:none!important}
+    .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    select{appearance:none;background:#0b122a;color:#fff;border:1px solid rgba(255,255,255,.2);padding:10px 12px;border-radius:12px;font-weight:600}
+    label{font-weight:700;margin-right:6px}
+    a.link{color:#a5e8ff}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  </style>
+</head>
+<body>
+  <canvas id="bg"></canvas>
+
+  <!-- HUD -->
+  <div id="hudScore" class="hud hidden">💎 Pontos: <span id="score">0</span> · 🏅 Recorde: <span id="best">0</span></div>
+  <div id="hudLevel" class="hud right hidden">📘 Nível: <span id="lvl">1</span>/<span id="total">10</span></div>
+  <button id="menuBtn" class="hud" style="top:52px;left:12px;display:none">🏠 Menu</button>
+  <button id="muteBtn" class="hud right" style="top:52px;right:12px;display:none">🔊 Som</button>
+
+  <!-- MENU -->
+  <div id="menu" class="overlay">
+    <div class="card">
+      <h1>🧭 Explorador Digital</h1>
+      <h2>Missão TIC Segura (5.º ano) — Edição Plus</h2>
+      <p>Escolhe o tema e o número de perguntas. Depois, completa as missões com segurança e respeito digital.</p>
+      <div class="row">
+        <div>
+          <label for="tema">Tema</label>
+          <select id="tema" aria-label="Escolher tema">
+            <option value="tudo">Tudo</option>
+            <option value="definicao">Definição e áreas das TIC</option>
+            <option value="diadia">TIC no dia a dia</option>
+            <option value="seguranca">Segurança digital e palavras‑passe</option>
+            <option value="alertas">Sinais de alerta</option>
+            <option value="ferramentas">Ferramentas de proteção</option>
+            <option value="boaspraticas">Boas práticas</option>
+          </select>
+        </div>
+        <div>
+          <label for="qtd">Perguntas</label>
+          <select id="qtd" aria-label="Número de perguntas">
+            <option>6</option><option selected>10</option><option>12</option>
+          </select>
+        </div>
+        <div>
+          <label for="dif">Dificuldade</label>
+          <select id="dif" aria-label="Dificuldade">
+            <option value="normal" selected>Moderada</option>
+            <option value="facil">Fácil</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid">
+        <span class="chip">⌨️ ↑/↓ e Enter • 1–4</span>
+        <span class="chip">🔊 Som ON/OFF</span>
+        <span class="chip">💾 Guarda recorde e progresso</span>
+        <span class="chip">📴 Offline (PWA)</span>
+      </div>
+      <button id="start" class="btn">🚀 Iniciar Missão</button>
+      <p style="opacity:.8;margin-top:8px">Baseado no material da aula (TIC, Internet segura, sinais, ferramentas, boas práticas).</p>
+      <p class="sr-only" id="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <!-- PAINEL -->
+  <div id="panel" class="overlay hidden">
+    <div class="card" style="text-align:left">
+      <div class="progress"><div id="bar" class="fill"></div></div>
+      <h2 id="qTitle" style="margin-top:8px">Missão 1</h2>
+      <p id="qText" style="font-size:1.1rem;margin-top:6px"></p>
+      <div id="opts" class="options"></div>
+      <div id="explain" class="explain hidden"></div>
+    </div>
+  </div>
+
+  <!-- FINAL -->
+  <div id="over" class="overlay hidden">
+    <div class="card" style="text-align:center">
+      <h1 id="resultTitle">🎉 Missão Concluída!</h1>
+      <p id="summary"></p>
+      <div class="progress" style="margin-top:12px"><div id="finalBar" class="fill"></div></div>
+      <p id="badge" style="font-size:1.6rem;margin-top:10px"></p>
+      <button id="again" class="btn">🔄 Jogar novamente</button>
+      <p style="opacity:.8;margin-top:8px"><a class="link" href="#" id="share">Partilhar este resultado</a></p>
+    </div>
+  </div>
+
+<script>
+// ===== Background particles =====
+const canvas=document.getElementById('bg'); const ctx=canvas.getContext('2d');
+function resize(){canvas.width=Math.min(1000, innerWidth-40); canvas.height=Math.min(640, innerHeight-40)}; addEventListener('resize', resize); resize();
+const P=Array.from({length:64},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*2+1,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,a:Math.random()*.6+.2}));
+(function loop(){ctx.fillStyle='#0b1022'; ctx.fillRect(0,0,canvas.width,canvas.height); for(const p of P){p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=canvas.width;if(p.x>canvas.width)p.x=0;if(p.y<0)p.y=canvas.height;if(p.y>canvas.height)p.y=0;ctx.fillStyle=`rgba(0,212,255,${p.a})`;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();} requestAnimationFrame(loop);})();
+
+// ===== Question bank =====
+const BANK=[
+  // definicao
+  {t:'definicao', q:"O que são as TIC?", a:["Apenas jogos","Tecnologias para comunicar e tratar informação","Só redes sociais","Televisão"], c:1, e:"Juntam hardware, software e redes para comunicar, processar e partilhar informação."},
+  {t:'definicao', q:"Qual destas NÃO é área das TIC?", a:["Computação","Comunicação","Controlo e Automação","Agricultura tradicional"], c:3, e:"As três áreas principais são Computação, Comunicação e Controlo/Automação."},
+  // dia a dia
+  {t:'diadia', q:"Exemplo de TIC na escola:", a:["Caderno de papel","Quadro interativo e plataformas de aprendizagem","Relógio analógico","Lápis"], c:1, e:"Quadros interativos, computadores, tablets e plataformas online."},
+  {t:'diadia', q:"Em casa usamos TIC quando…", a:["Varrermos o chão","Vemos TV inteligente ou fazemos videochamadas","Comemos sopa","Dormimos"], c:1, e:"TV inteligente, jogos, videochamadas e pesquisas."},
+  // seguranca
+  {t:'seguranca', q:"O 'S' em HTTPS significa:", a:["Super-rápido","Seguro","Simples","Sem anúncios"], c:1, e:"HTTPS indica ligação cifrada (mais segura)."},
+  {t:'seguranca', q:"Boa palavra‑passe é:", a:["alexandra123","24junho","Gato!Rio7#","nomeDaEscola"], c:2, e:"Mistura maiúsculas, minúsculas, números e símbolos."},
+  {t:'seguranca', q:"Deves falar online com:", a:["Qualquer pessoa","Apenas quem conheces","Bots desconhecidos","Quem promete presentes"], c:1, e:"Tal como na vida real, fala só com quem conheces e confias."},
+  // alertas
+  {t:'alertas', q:"Exemplo de sinal de alarme:", a:["Mensagem a pedir dados pessoais","Site com HTTPS","Página da escola","Aplicação da biblioteca"], c:0, e:"Pedidos de dados, ofertas 'grátis' e conteúdos impróprios são bandeiras vermelhas."},
+  // ferramentas
+  {t:'ferramentas', q:"Ferramenta que ajuda a navegar em segurança:", a:["Antivírus e controlo parental","Aumentar o brilho","Mudar o wallpaper","Semáforos"], c:0, e:"Antivírus protege, controlo parental aplica filtros e limites."},
+  // boas práticas
+  {t:'boaspraticas', q:"Boa prática no computador:", a:["Nunca fazer pausas","Partilhar password","Pausas ativas a cada ~30 min","Olhar sem piscar"], c:2, e:"Pausas regulares e equilíbrio com atividades fora do ecrã."}
+];
+
+// ===== Helpers =====
+const qs=(sel)=>document.querySelector(sel);
+const menu=qs('#menu'), panel=qs('#panel'), over=qs('#over');
+const startBtn=qs('#start'), againBtn=qs('#again'); const temaSel=qs('#tema'), qtdSel=qs('#qtd'), difSel=qs('#dif');
+const hudScore=qs('#hudScore'), hudLevel=qs('#hudLevel'), scoreEl=qs('#score'), bestEl=qs('#best'), lvlEl=qs('#lvl'), totalEl=qs('#total');
+const bar=qs('#bar'), finalBar=qs('#finalBar'); const qTitle=qs('#qTitle'), qText=qs('#qText'), opts=qs('#opts'), explain=qs('#explain');
+const muteBtn=qs('#muteBtn'), menuBtn=qs('#menuBtn'), shareLink=qs('#share');
+const statusEl=qs('#status');
+
+let level=1, score=0, total=10, locked=false, muted=false, focusIdx=0, queue=[];
+
+bestEl.textContent = localStorage.getItem('tic5_best') || 0;
+
+// Build queue from BANK w/ filters, shuffle
+function buildQueue(){
+  const tema=temaSel.value;
+  let pool = BANK.filter(q => tema==='tudo' ? true : q.t===tema);
+  // Duplicate if not enough
+  while(pool.length < +qtdSel.value){ pool = pool.concat(pool); }
+  pool = pool.slice(); // copy
+  // shuffle
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  queue = pool.slice(0, +qtdSel.value);
+  total = queue.length; totalEl.textContent = total;
+  // easier mode -> reduce options to 3 w/ correct included
+  if(difSel.value==='facil'){
+    queue = queue.map(q=>{
+      const opts=[...q.a]; const correct=q.c; const keep=new Set([correct]);
+      while(keep.size<3){ keep.add(Math.floor(Math.random()*opts.length)); }
+      const arr=[...keep].map(i=>opts[i]); const newCorrect=[...keep].indexOf(correct);
+      return {...q, a:arr, c:newCorrect};
+    });
+  }
+}
+
+// Sound
+function beep(type='ok'){ if(muted) return; const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+  const ac=new AC(), o=ac.createOscillator(), g=ac.createGain(); o.connect(g); g.connect(ac.destination);
+  const map={ok:[740,.16],bad:[220,.22],win:[880,.4]}; const [f,t]=map[type]||map.ok; o.frequency.value=f; g.gain.value=.22; g.gain.exponentialRampToValueAtTime(.01, ac.currentTime+t); o.start(); o.stop(ac.currentTime+t); }
+
+function start(){
+  buildQueue(); level=1; score=0; locked=false; focusIdx=0;
+  menu.classList.add('hidden'); panel.classList.remove('hidden');
+  hudScore.classList.remove('hidden'); hudLevel.classList.remove('hidden');
+  muteBtn.style.display='inline-block'; menuBtn.style.display='inline-block';
+  updateHud(); load(); beep('ok'); saveProgress();
+}
+function backToMenu(){ panel.classList.add('hidden'); over.classList.add('hidden'); hudScore.classList.add('hidden'); hudLevel.classList.add('hidden'); muteBtn.style.display='none'; menuBtn.style.display='none'; menu.classList.remove('hidden'); }
+
+function updateHud(){ scoreEl.textContent=score; lvlEl.textContent=level; bar.style.width=((level-1)/total*100).toFixed(1)+'%'; }
+
+function load(){
+  explain.classList.add('hidden'); opts.innerHTML=''; const q=queue[level-1];
+  qTitle.textContent=`Missão ${level}`; qText.textContent=q.q;
+  q.a.forEach((t,i)=>{ const b=document.createElement('button'); b.className='opt'; b.innerHTML=`<strong>${i+1}.</strong> ${t}`; b.onclick=()=>pick(i); b.setAttribute('aria-label', `Opção ${i+1}`); opts.appendChild(b); });
+  locked=false; focusIdx=0; highlight();
+  saveProgress();
+}
+function highlight(){ [...opts.children].forEach((el,i)=> el.style.outline = i===focusIdx ? '3px solid var(--gold)' : 'none'); }
+
+function pick(i){
+  if(locked) return; locked=true; const q=queue[level-1]; const nodes=[...opts.children];
+  nodes[q.c].classList.add('correct'); if(i!==q.c){ nodes[i]?.classList.add('wrong'); beep('bad'); } else { score += 100 + level*5; beep('ok'); }
+  explain.textContent = (i===q.c ? '✔️ Correto! ' : 'ℹ️ Quase! ') + q.e; explain.classList.remove('hidden');
+  setTimeout(next, 1100); updateHud(); saveProgress();
+}
+
+function next(){ level++; if(level>total) return end(); updateHud(); load(); }
+
+function end(){
+  panel.classList.add('hidden'); hudScore.classList.add('hidden'); hudLevel.classList.add('hidden');
+  over.classList.remove('hidden');
+  const pct=Math.round(score/(total*100)*100); finalBar.style.width=pct+'%';
+  qs('#summary').textContent=`Pontuação final: ${score} pontos (${pct}%)`;
+  let title='🏅 Explorador em treino', badge='🥉 Bronze'; if(pct>=90){title='🌟 Mestre Explorador Digital'; badge='🏆 Ouro'; beep('win');} else if(pct>=70){title='👏 Excelente progresso!'; badge='🥈 Prata';}
+  qs('#resultTitle').textContent=title; qs('#badge').textContent=badge;
+  const best=parseInt(localStorage.getItem('tic5_best')||'0'); if(score>best){ localStorage.setItem('tic5_best', String(score)); bestEl.textContent=score; statusEl.textContent='Novo recorde!'; }
+  // share
+  const url=new URL(location.href); url.searchParams.set('score', score); url.searchParams.set('pct', pct); shareLink.href=url.toString();
+  shareLink.onclick=(e)=>{ e.preventDefault(); if(navigator.share){ navigator.share({title:'Explorador Digital — TIC 5.º', text:`Fiz ${score} pontos (${pct}%)!`, url:url.toString()}); } else { navigator.clipboard.writeText(url.toString()); alert('Ligação copiada!'); } };
+  clearProgress();
+}
+
+// Keyboard & controls
+addEventListener('keydown', (e)=>{
+  if(panel.classList.contains('hidden')) return;
+  const map={'1':0,'2':1,'3':2,'4':3}; if(map.hasOwnProperty(e.key)){ pick(map[e.key]); return; }
+  if(e.key==='ArrowDown'){ focusIdx=(focusIdx+1)%opts.children.length; highlight(); }
+  if(e.key==='ArrowUp'){ focusIdx=(focusIdx-1+opts.children.length)%opts.children.length; highlight(); }
+  if(e.key==='Enter'){ pick(focusIdx); }
+});
+
+muteBtn.onclick=()=>{ muted=!muted; muteBtn.textContent = muted?'🔇 Som':'🔊 Som'; };
+menuBtn.onclick=backToMenu;
+startBtn.onclick=start; againBtn.onclick=()=>{ over.classList.add('hidden'); menu.classList.remove('hidden'); };
+
+// ===== Save / resume progress =====
+function saveProgress(){
+  const state={level, score, queue, total, muted, best:localStorage.getItem('tic5_best')||0};
+  localStorage.setItem('tic5_state', JSON.stringify(state));
+}
+function clearProgress(){ localStorage.removeItem('tic5_state'); }
+(function resume(){
+  const raw=localStorage.getItem('tic5_state'); if(!raw) return;
+  try{ const s=JSON.parse(raw); queue=s.queue||[]; if(!queue.length) return;
+    level=s.level||1; score=s.score||0; total=s.total||queue.length; muted=!!s.muted; bestEl.textContent = s.best || (localStorage.getItem('tic5_best')||0);
+    menu.classList.add('hidden'); panel.classList.remove('hidden'); hudScore.classList.remove('hidden'); hudLevel.classList.remove('hidden'); muteBtn.style.display='inline-block'; menuBtn.style.display='inline-block';
+    updateHud(); load();
+  }catch(e){/* ignore */}
+})();
+
+// ===== Simple PWA (offline) =====
+if('serviceWorker' in navigator){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }); }
+</script>
+</body>
+</html>
