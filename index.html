@@ -273,7 +273,14 @@ function clearProgress(){ localStorage.removeItem('tic5_state'); }
 })();
 
 // ===== Simple PWA (offline) =====
-if('serviceWorker' in navigator){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }); }
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./sw.js')
+      .then(() => console.log('Service Worker registado ✅'))
+      .catch(err => console.error('Erro no Service Worker ❌', err));
+  });
+}
 </script>
 </body>
 </html>
