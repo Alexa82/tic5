@@ -1,9 +1,0 @@
-{
-  "name": "Explorador Digital — TIC 5.º (Plus)",
-  "short_name": "TIC5 Plus",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#0b1022",
-  "theme_color": "#2575fc",
-  "icons": []
-}
